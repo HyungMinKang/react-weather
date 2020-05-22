@@ -1,33 +1,53 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert } from "react-native";
 import Loading from "./Loading";
+import * as Location from "expo-location";
+import axios from "axios";
+import Weather from "./Weather";
 
-export default function App() {
-  return (
-    <View style={styles.container}>
+const API_KEY = "fed7707c698387d0f6d2611b19caf470";
+
+export default class extends React.Component {
+  state = {
+    isLoading: true,
+  };
+  getWeather = async (latitude, longitude) => {
+    const {
+      data: {
+        main: { temp },
+        weather,
+      },
+    } = await axios.get(
+      `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric`
+    );
+
+    this.setState({
+      isLoading: false,
+      condition: weather[0].main,
+      temp,
+    });
+  };
+  getLocation = async () => {
+    try {
+      await Location.requestPermissionsAsync();
+      const {
+        coords: { latitude, longitude },
+      } = await Location.getCurrentPositionAsync();
+      this.getWeather(37.4562, 126.7288);
+      this.setState({ isLoading: false });
+    } catch (error) {
+      Alert.alert("Can't find you", "So sad");
+    }
+  };
+  componentDidMount() {
+    this.getLocation();
+  }
+  render() {
+    const { isLoading, temp, condition } = this.state;
+    return isLoading ? (
       <Loading />
-      <View style={styles.yellowView}></View>
-      <View style={styles.blueView}></View>
-    </View>
-  );
+    ) : (
+      <Weather temp={Math.round(temp)} condition={condition} />
+    );
+  }
 }
-
-// react-native flexbox는 flex-direction default가 column이다
-const styles = StyleSheet.create({
-  // 형제가 없는경우 flex:1은 전체를 다 쓰겠다
-  container: {
-    flex: 1,
-  },
-  text: {
-    color: "black",
-  },
-  // 형제가 있는 경우 상대적인 비율
-  yellowView: {
-    flex: 1,
-    backgroundColor: "yellow",
-  },
-  blueView: {
-    flex: 1,
-    backgroundColor: "blue",
-  },
-});
